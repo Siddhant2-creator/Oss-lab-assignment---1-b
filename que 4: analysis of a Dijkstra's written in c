@@ -1,0 +1,256 @@
+Github repository : Data-Structures-and-Algorithms/10.Graphs/DijkstrasSSSP.c at master · amitbansal7/Data-Structures-and-Algorithms (github.com)
+
+Header Files
+
+#include "stdio.h"
+#include "stdlib.h"
+#include "limits.h"
+- `stdio.h`: Standard input-output header file.
+- `stdlib.h`: Standard library header file for memory allocation and other utilities.
+- `limits.h`: Defines constants for the sizes of basic data types.
+
+Data Structures
+1. AdjListNode: Represents a node in the adjacency list.
+   
+   struct AdjListNode {
+       int dest;
+       int weight;
+       struct AdjListNode* next;
+   };
+   
+   - `dest`: Destination vertex.
+   - `weight`: Weight of the edge.
+   - `next`: Pointer to the next node in the adjacency list.
+
+2. AdjList: Represents an adjacency list.
+   
+   struct AdjList {
+       struct AdjListNode* head;
+   };
+  
+   - `head`: Pointer to the head node of the list.
+
+3. Graph: Represents a graph.
+   
+   struct Graph {
+       int v;
+       struct AdjList* array;
+   };
+   
+   - `v`: Number of vertices in the graph.
+   - `array`: Array of adjacency lists.
+
+4. MinHeapNode: Represents a node in the min heap.
+   
+   struct MinHeapNode {
+       int v;
+       int dist;
+   };
+   
+   - `v`: Vertex number.
+   - `dist`: Distance value used for priority.
+
+5. MinHeap: Represents a min heap.
+   
+   struct MinHeap {
+       int size;
+       int capacity;
+       int* pos;
+       struct MinHeapNode** array;
+   };
+   
+   - `size`: Current size of the min heap.
+   - `capacity`: Maximum capacity of the min heap.
+   - `pos`: Array to keep track of the positions of nodes.
+   - `array`: Array of pointers to heap nodes.
+
+Functions
+
+1. newAdjListNode: Creates a new adjacency list node.
+   
+   struct AdjListNode* newAdjListNode(int dest, int weight) {
+       struct AdjListNode* newNode = (struct AdjListNode*)malloc(sizeof(struct AdjListNode));
+       newNode->dest = dest;
+       newNode->weight = weight;
+       newNode->next = NULL;
+       return newNode;
+   }
+   
+
+2. createGraph: Creates a graph with `v` vertices.
+   
+   struct Graph* createGraph(int v) {
+       struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
+       graph->v = v;
+       graph->array = (struct AdjList*)malloc(sizeof(struct AdjList) * v);
+       for (int i = 0; i < v; i++)
+           graph->array[i].head = NULL;
+       return graph;
+   }
+
+
+3. AddEdge: Adds an edge to an undirected graph.
+   
+   void AddEdge(struct Graph* graph, int src, int dest, int weight) {
+       struct AdjListNode* newNode = newAdjListNode(dest, weight);
+       newNode->next = graph->array[src].head;
+       graph->array[src].head = newNode;
+
+       newNode = newAdjListNode(src, weight);
+       newNode->next = graph->array[dest].head;
+       graph->array[dest].head = newNode;
+   }
+   
+
+4. newMinHeapNode: Creates a new min heap node.
+   
+   struct MinHeapNode* newMinHeapNode(int v, int dist) {
+       struct MinHeapNode* minHeapNode = (struct MinHeapNode*)malloc(sizeof(struct MinHeapNode));
+       minHeapNode->v = v;
+       minHeapNode->dist = dist;
+       return minHeapNode;
+   }
+   
+
+5. createMinHeap: Creates a min heap.
+   
+   struct MinHeap* createMinHeap(int capacity) {
+       struct MinHeap* minHeap = (struct MinHeap*)malloc(sizeof(struct MinHeap));
+       minHeap->pos = (int*)malloc(capacity * sizeof(int));
+       minHeap->size = 0;
+       minHeap->capacity = capacity;
+       minHeap->array = (struct MinHeapNode**)malloc(sizeof(struct MinHeapNode*) * capacity);
+       return minHeap;
+   }
+  
+
+6. swapMinHeapNode: Swaps two min heap nodes.
+   
+   void swapMinHeapNode(struct MinHeapNode** a, struct MinHeapNode** b) {
+       struct MinHeapNode* temp = *a;
+       *a = *b;
+       *b = temp;
+   }
+   
+
+7. MinHeapify: Maintains the min heap property.
+   
+   void MinHeapify(struct MinHeap* minHeap, int i) {
+       int l = 2 * i + 1;
+       int r = 2 * i + 2;
+       int smallest = i;
+
+       if (l < minHeap->size && minHeap->array[l]->dist < minHeap->array[smallest]->dist)
+           smallest = l;
+
+       if (r < minHeap->size && minHeap->array[r]->dist < minHeap->array[smallest]->dist)
+           smallest = r;
+
+       if (smallest != i) {
+           struct MinHeapNode* smallestNode = minHeap->array[smallest];
+           struct MinHeapNode* iNode = minHeap->array[i];
+
+           minHeap->pos[smallestNode->v] = i;
+           minHeap->pos[iNode->v] = smallest;
+
+           swapMinHeapNode(&minHeap->array[smallest], &minHeap->array[i]);
+           MinHeapify(minHeap, smallest);
+       }
+   }
+   
+
+8. isEmpty: Checks if the min heap is empty.
+   
+   int isEmpty(struct MinHeap* minHeap) {
+       return minHeap->size == 0;
+   }
+   
+
+9. decreaseKey: Decreases the distance value of a vertex in the min heap.
+   
+   void decreaseKey(struct MinHeap* minHeap, int v, int dist) {
+       int i = minHeap->pos[v];
+       minHeap->array[i]->dist = dist;
+
+       while (i && minHeap->array[i]->dist < minHeap->array[(i - 1) / 2]->dist) {
+           minHeap->pos[minHeap->array[i]->v] = (i - 1) / 2;
+           minHeap->pos[minHeap->array[(i - 1) / 2]->v] = i;
+           swapMinHeapNode(&minHeap->array[i], &minHeap->array[(i - 1) / 2]);
+           i = (i - 1) / 2;
+       }
+   }
+   
+
+10. extractMin: Extracts the minimum node from the min heap.
+    
+    struct MinHeapNode* extractMin(struct MinHeap* minHeap) {
+        if (isEmpty(minHeap))
+            return NULL;
+
+        struct MinHeapNode* root = minHeap->array[0];
+        struct MinHeapNode* lastNode = minHeap->array[minHeap->size - 1];
+        minHeap->array[0] = lastNode;
+
+        minHeap->pos[root->v] = minHeap->size - 1;
+        minHeap->pos[lastNode->v] = 0;
+
+        --minHeap->size;
+        MinHeapify(minHeap, 0);
+
+        return root;
+    }
+    
+
+11. isInMinHeap: Checks if a vertex is in the min heap.
+   
+    int isInMinHeap(struct MinHeap* minHeap, int v) {
+        if (minHeap->pos[v] < minHeap->size)
+            return 1;
+        else
+            return 0;
+    }
+
+
+12. printpath: Prints the path from the source to a vertex.
+    
+    void printpath(int parent[], int v) {
+        if (parent[v] == v)
+            return;
+        printpath(parent, parent[v]);
+        printf("%d->", parent[v]);
+    }
+   
+
+13. printarr: Prints the distances and paths from the source to all vertices.
+    
+    void printarr(int dist[], int n, int parent[]) {
+        printf("Vertex   distance from Source   Path\n");
+        for (int i = 0; i < n; i++) {
+            printf("%d \t\t%d   \t\t", i, dist[i]);
+            printpath(parent, i);
+            printf("%d\n", i);
+        }
+    }
+  
+
+14. dijkstra: Implements Dijkstra's algorithm to find the shortest path from a source vertex.
+    
+    void dijkstra(struct Graph* graph, int src) {
+        int V = graph->v;
+        struct MinHeap* minHeap = createMinHeap(V);
+        int dist[V];
+        minHeap->size = V;
+        int parent[V];
+        parent[src] = src;
+
+        for (int v = 0; v < V; v++) {
+            dist[v] = INT_MAX;
+            minHeap->array[v] = newMinHeapNode(v, INT_MAX);
+            minHeap->pos[v] = v;
+        }
+
+        dist[src] = 0;
+        decreaseKey(minHeap,
+
+
+
